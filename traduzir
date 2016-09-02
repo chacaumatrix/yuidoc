@@ -1,0 +1,547 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>POF</title>
+	<meta http-equiv="Content-Language" content="pt_">
+	<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+	<meta name="Title" content="Serviço de Namoro 100% grátis">
+	<meta name="description" content="Serviço de Namoro 100% Grátis , Fotos grátis, Bate papo, Mensagens, Solteiros, fóruns etc.">
+	<meta name="keywords" content="serviço de encontros grátis, gratuito, namoro, online, namoro online, serviço de namoro online grátis,  serviço de namoro online">
+	<meta name="robots" content="all,index,follow">
+	<meta name="CLASSIFICATION" content="">
+	<meta http-equiv="CACHE-CONTROL" content="NO-CACHE">
+	<meta http-equiv="PRAGMA" content="NO-CACHE">
+	
+
+<link rel="stylesheet" type="text/css" href="/css/versioned/main.min.css" />
+<link href='//fonts.googleapis.com/css?family=Open+Sans:200,300,400,500,600,700' rel='stylesheet' type='text/css' >
+
+
+	
+<!-- start global Javascript control -->
+
+<script type="text/javascript" src="/javascript/versioned/stacktrace.js?1"></script>
+<!-- POF Common Javascript-->
+		    <!--// prod minified javascript files -->
+		    <script type="text/javascript" src="/javascript/versioned/pofcommon.min.js"></script>
+    
+        <!--// jQuery Global -->
+        <script type="text/javascript" src="/javascript/versioned/jquery/jquery-1.10.1.min.js"></script>
+        
+        <!--// meet me badge -->
+        <script>
+            jQuery(function () {
+                jQuery.ajaxSetup({ cache: false });
+                var meetmeCount = 0;
+
+                var meetMeBadge = jQuery.get("/_meetmefeed.ashx?action=whowantstomeetyoucount", function () {
+                    meetmeCount = meetMeBadge.responseText;
+                    //console.log("success reading viewedme badge count:" + viewedmeCount );
+                    LoadMeetMeBadge();
+                })
+                    .fail(function () {
+                        //console.log("error reading viewedme badge count");
+                    });
+                
+                // loads our initial container for the dropdown
+                function LoadMeetMeBadge() {
+                    // add the badge
+                    if (meetmeCount > 0)
+                    {
+                        var meetmeCountString = "" + meetmeCount;
+                        if (meetmeCount > 99)
+                            meetmeCountString = "99+";
+
+                        // make sure we don't have this already for some reason
+                        jQuery("#mainmenu_meetme").remove("#whowantstomeetyou-badge");
+                        jQuery("#mainmenu_meetme").append("<span id='whowantstomeetyou-badge' class='notification-badge'>" + meetmeCountString + "</span");
+
+                        
+
+                        
+                    }
+                }
+            });
+        </script>
+        
+            <script type="text/javascript" src="/javascript/versioned/jquery/plugins/jquery.easing.min.js"></script>
+            <script type="text/javascript" src="/javascript/versioned/jquery/plugins/jquery.sly.js"></script>
+            
+            <!--// activity feed -->
+            <script>
+                jQuery(function ()
+                {
+                    jQuery.ajaxSetup({ cache: false });
+                    // read in our badge count & update if success
+                    var badgeCount = 0;
+                    var viewedmeCount = 0;
+                    var lastid = -1;
+                    var ready = true;          // do we have more results?
+                    var firstload = true;       // is this the first load of our results?
+
+                    // no data state
+                    var emptyStateTemplate = "<li id='meetme_placeholder' class='meetme_listentry-empty'>";
+                            emptyStateTemplate += "<div id='meetme_placeholder_inner' class='aligncenter text-center'>Ninguém aqui ainda? Você verá pessoas aqui quando houver um Encontro Mútuo.</div>";
+                            emptyStateTemplate += "</li>";
+
+                    var meetme = jQuery.get("/_meetmefeed.ashx?action=getbadgecount", function ()
+                    {
+                        //console.log("success reading meetme badge count");
+                        //alert("success, badgecount: " + meetme.responseText);
+                        badgeCount = meetme.responseText;
+                        if (badgeCount > 0) {
+                            jQuery("#mainmenu-meetme-badge").append("<span id='notificationcenter-badge' class='notification-badge'>" + meetme.responseText + "</span");
+                            jQuery("#meetme-badge").addClass("meetme-badge_active");
+                        }
+                        else {
+                            jQuery("#meetme-badge").addClass("meetme-badge_inactive");
+                        }
+                    
+                    })
+                    .fail(function ()
+                    {
+                        //console.log("error reading meetme badge count");
+                    });
+
+                    var viewedme = jQuery.get("/_meetmefeed.ashx?action=getbadgecountviewedme", function ()
+                    {
+                        viewedmeCount = viewedme.responseText;
+                        //console.log("success reading viewedme badge count:" + viewedmeCount );
+                    })
+                    .fail(function () {
+                        //console.log("error reading viewedme badge count");
+                    });
+
+                    var meetme_state = false;
+                    var meetme_loaded = false;
+                    var meetme_ajaxactive = false;      // are we already doing an infinite scrolly update?
+
+                    // add the click handlers for the badge, will open the dropdown and populate it with ajax
+                    jQuery("#mainmenu-meetme-badge").click(function (e)
+                    {
+                        // only do anything if we have any events
+                        /*if (badgeCount == 0) {
+                            //console.log("no meet me events");
+                            return;
+                        }*/
+                        e.stopPropagation();
+
+                        //console.log("meetme_state: " + meetme_state);
+                        if (meetme_state)
+                        {
+                            // don't close the dropdown if we click on the scroller 
+                            //if (e.target == jQuery("#meetme-scrollbar"))
+                                //return;
+                            meetme_state = false;
+                            //console.log("hiding meetme dropdown");
+                            jQuery("#meetme-outer-wrapper").hide();
+                        }
+                        else {
+                            meetme_state = true;
+                            //console.log("show  meetme dropdown");
+                            if (meetme_loaded) {
+                                // note: should have some kind of timer to determine whether we need to 
+                                // refresh this thing or not. we'll assume new pageloads will do that for now
+                                //console.log("meetme dropdown loaded, show");
+                                jQuery("#meetme-outer-wrapper").show();
+                            }
+                            else {
+                                //console.log("meetme dropdown NOT loaded, do ajax call");
+
+                                // add our badge / dropdown stuff to the main menu, defaults to ajax loader spinny
+                                LoadDefaultWrapper();
+
+                                // get our sly infinite scrolly thing setup
+                                var options = {
+                                    scrollBy: 200,
+                                    speed: 200,
+                                    easing: 'easeOutQuart',
+                                    scrollBar: '#meetme-scrollbar',
+                                    dynamicHandle: 1,
+                                    dragHandle: 1,
+                                    clickBar: 1,
+                                    mouseDragging: 1,
+                                    touchDragging: 1,
+                                    releaseSwing: 1
+                                };
+                                // create our sly object
+                                var frame = new Sly('#meetme-dropdown', options);
+
+                                // Add more items when close to the end
+                                frame.on('load change', function () {
+                                    // make sure we loaded in the first place before we start triggering ajax queries
+                                    if (meetme_loaded) {
+                                        if (this.pos.dest > this.pos.end - 50) {
+                                            // make sure we aren't firing this event repeatedly while we wait for the ajax response
+                                            if (!meetme_ajaxactive) {
+                                                loadMeetMeFeed();
+                                                this.reload();
+                                            }
+                                        }
+                                    }
+                                });
+
+                                var dropdown = "";
+                                dropdown += LoadViewedMeCounter(viewedmeCount);
+
+                                var feedURL = "/_meetmefeed.ashx?action=getmeetmelist";
+
+                                jQuery.getJSON(feedURL, function (json)
+                                {
+                                    dropdown += LoadFeedItems(json);
+
+                                    var $items = jQuery('#meetme-items');
+                                    $items.html(dropdown);
+
+                                    var itemCount = $items.children().length;
+                                    if (itemCount == 1) {
+                                        // empty state, shorter dropdown, don't need the scrolly thing
+                                        jQuery("#meetme-dropdown-wrapper").height(125);
+                                        jQuery("#meetme-scrollbar").hide();
+                                    }
+                                    else {
+                                        // Initiate Sly
+                                        frame.init();
+                                    }
+                                    firstload = false;
+                                    // remember that we're already loaded 
+                                    meetme_loaded = true;
+                                })
+                                .fail(function () {
+                                    // should vee retry?  vut dun happen now?
+                                    // show empty state in case of error
+                                    dropdown = emptyStateTemplate;
+
+                                    var $items = jQuery('#meetme-items');
+                                    $items.html(dropdown);
+
+                                    // empty state, shorter dropdown, don't need the scrolly thing
+                                    jQuery("#meetme-dropdown-wrapper").height(125);
+                                    jQuery("#meetme-scrollbar").hide();
+
+                                    firstload = false;
+                                    // remember that we're already loaded 
+                                    meetme_loaded = true;
+                                });
+                            }   // end is loaded
+                        }   // end show meet me
+                    });
+
+                    // does ajax call to retrieve meetme feed list
+                    // lastid is used for paging, listed in decreasing order in the database, we pass in the lastid and the proc will return any mutual meetme's up to that id
+                    // pass firstload if you want to reset / clear the list (ie on first load, which removes the temp ajax spinner that we use to start)
+                    function loadMeetMeFeed()
+                    {
+                        //console.log("Infinite scrolly update of more items for meetme feed started");
+
+                        meetme_ajaxactive = true;
+                        var dropdown = "";
+
+                        var feedURL = "/_meetmefeed.ashx?action=getmeetmelist&lastid=" + lastid;
+                        var $items = jQuery('#meetme-items');
+                        if (ready) {
+                            jQuery.getJSON(feedURL, function (json) {
+                                dropdown += LoadFeedItems(json);
+
+                                $items.append(dropdown);
+                                meetme_ajaxactive = false;
+                            })
+                            .fail(function () {
+                                // should vee retry?  vut dun happen now?
+                                // show empty state in case of error
+                                dropdown += emptyStateTemplate;
+
+                                var $items = jQuery('#meetme-items');
+                                $items.html(dropdown);
+
+                                // empty state, shorter dropdown, don't need the scrolly thing
+                                jQuery("#meetme-dropdown-wrapper").height(125);
+                                jQuery("#meetme-scrollbar").hide();
+
+                                firstload = false;
+                                // remember that we're already loaded 
+                                meetme_loaded = true;
+                            });
+                        }
+                        else {
+                            //console.log("No more results...");
+                        }
+                    }
+
+                    function LoadFeedItems(json)
+                    {
+                        var $items = jQuery('#meetme-items');
+                        var currentCount = $items.children().length;
+                        var itemCount = json.length;
+
+                        var content = "";
+
+                        // if we don't have any entries, add a placeholder / empty data state
+                        if (itemCount == 0 && firstload)
+                        {
+                            content = emptyStateTemplate;
+                        }
+                        else
+                        {
+                            for (var i = 0; i < itemCount; i++)
+                            {
+                                var bgClass = "meetme_unread";
+                                if (json[i].IsRead)
+                                    bgClass = "meetme_read";
+
+                                // all of the other entries are mutual meet me links
+                                content += "<li id='meetme_" + (currentCount + i) + "' class='meetme_listentry " + bgClass + "'>";
+                                content += "<a class='meetme_feed_clickable' href='pt_viewprofile.aspx?profile_id=" + json[i].ProfileID + "&alertmutual=1'>";
+                                content += "<span class='meetme_feed_image_wrapper'><img class='meetme_feed_image' src='" + json[i].UserImage + "'></span>";
+                                content += "<span class='meetme_feed_content_wrapper'>";
+                                content += "<span class='meetme_feed_message'>" + json[i].Message + "</span>";
+                                content += "<span class='meetme_feed_time'>" + json[i].TimeStamp + "</span>";
+                                content += "</span>";
+                                content += "<span class='meetme_feed_icon'><img src='" + json[i].Icon + "' \></span>";
+                                content += "</a>";
+                                content += "</li>";
+                            }
+                            if (itemCount > 0) {
+                                // save the id of the last record we recieved so we can do infinite scroll for the next batch
+                                lastid = json[itemCount - 1].MessageID;
+                            }
+                            else {
+                                ready = false;      // no more results
+                                //console.log("done infinite scroll, no more results");
+                            }
+                        }
+                        return content;
+                    }
+
+                    function LoadViewedMeCounter(viewedmeCount)
+                    {
+                        //console.log("viewed me counter: " + viewedmeCount);
+                        var content = "";
+                        if (viewedmeCount > 0)
+                        {
+                            //console.log("adding viewed me counter! ");
+                            var viewedme_message = viewedmeCount + " usuários viram seu perfil!";
+                            var viewedme_bigImage = "/images/pofv3/alert-center/generic-notification.png";
+                            var viewedme_smallIcon = "/images/pofv3/alert-center/viewedme-notification-new.png";
+
+                            // all of the other entries are mutual meet me links
+                            content += "<li id='viewedme_counter' class='meetme_listentry meetme_unread'>";
+                            content += "<a class='meetme_feed_clickable' href='pt_whoviewedme.aspx?alertviewedme=1'>";
+                            content += "<span class='meetme_feed_image_wrapper'><img class='meetme_feed_image' src='" + viewedme_bigImage + "'></span>";
+                            content += "<span class='meetme_feed_content_wrapper'>";
+                            content += "<span class='meetme_feed_message'>" + viewedme_message + "</span>";
+                            content += "<span class='meetme_feed_time'>&nbsp;</span>";
+                            content += "</span>";
+                            content += "<span class='meetme_feed_icon'><img src='" + viewedme_smallIcon + "' \></span>";
+                            content += "</a>";
+                            content += "</li>";
+                        }
+
+                        return content;
+                    }
+
+                    jQuery(document).on("touchstart click", function (e)
+                    {
+                        // we only care if the dohickey is visible
+                        if( meetme_state === false)
+                            return;
+
+                        var subject = jQuery("#meetme-outer-wrapper");
+
+                        if (e.target.id != subject.attr('id') && !subject.has(e.target).length)
+                        {
+                            //console.log("hide meetme dropdown, external click");
+                            meetme_state = false;
+                            subject.fadeOut();
+                        }
+                    });
+
+                    // loads our initial container for the dropdown
+                    function LoadDefaultWrapper()
+                    {
+                        var wrapper = "<div id='meetme-outer-wrapper'><div id='meetme-dropdown-arrow'></div>";
+                            wrapper += "<ul id='meetme-dropdown-wrapper' class='meetme-dropdown-menu'>";
+                                wrapper += "<li><p id='meetme-feed-header' class='font16 feedheader aligncenter text-center'>Central de Alertas</p></li>";
+                                wrapper += "<li>";
+                                    // scroll bar
+                                    wrapper += "<div id='meetme-scrollbar' class='scrollbar'><div class='handle'><div class='mousearea'></div></div></div>";
+                                    wrapper += "<div id='meetme-dropdown' class='dropdown-menu-list frame'>";
+                                        wrapper += "<ul id='meetme-items' class='items clearfix'>";
+
+                                            // ajax loader while we wait for a response
+                                            wrapper += "<li><div id='meetme-loader' class='aligncenter text-center'>Aguarde por favor...<br/><br/><br/><span class='ajax-loader'></span></div></li>";
+
+                                // results will be inserted here
+                        wrapper += "</ul></div></li></ul></div>";
+
+                        jQuery("#meetme-badge-click").append(wrapper);
+                    }
+                });
+
+            </script>
+            
+        <!-- common google analytics include -->
+        <script>
+            (function (i, s, o, g, r, a, m) {
+                i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+                    (i[r].q = i[r].q || []).push(arguments)
+                }, i[r].l = 1 * new Date(); a = s.createElement(o),
+                m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+            })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+            ga('create', 'UA-172947-1', 'auto');
+            ga('send', 'pageview');
+
+        </script>
+        <!-- /common google analytics include -->
+        
+<!-- Facebook Pixel Code -->
+<script>
+    !function (f, b, e, v, n, t, s) {
+        if (f.fbq) return; n = f.fbq = function () {
+            n.callMethod ?
+            n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+        }; if (!f._fbq) f._fbq = n;
+        n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0;
+        t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s)
+    }(window,
+    document, 'script', '//connect.facebook.net/en_US/fbevents.js');
+
+    fbq('init', '882914385100157');
+    fbq('track', "PageView");</script>
+
+<!-- End Facebook Pixel Code -->
+        
+<!-- / global Javascript control -->
+	
+	<style type="text/css">
+	    
+	     .searchImg {
+	         border: 1px solid #E0E0E0;
+	     }
+
+	    #trailimageid {
+	        font-size: 0.75em;
+	        position: absolute;
+	        left: -10000px;
+	        top: 0px;
+	        height: 0px;
+	        z-index: 200;
+	    }
+	    #messageTip {
+	        padding-left: 30px;
+	        padding-right: 30px;
+	    }
+	    #toWrapper {
+	        text-align: left;
+	        float: left;
+
+	    }
+	    #messageFormWrapper {
+	        padding-left: 70px;
+	        padding-right: 70px;
+	        text-align: left;
+	    }
+	    .messageTextArea 
+	    {
+	        width: 100%;
+	        height: 120px;
+	    }
+	    #messageBottomWrapper {
+	        width: 80%;
+	        float: left;
+	        padding: 0px;
+	        padding-top: 10px;
+	        padding-bottom: 10px;
+	        padding-left: 70px;
+	    }
+        .attachimageelement {
+            width: 110px;
+            padding: 5px;
+            float: left;
+        }
+        #attachimageswrapper {
+            clear: both;
+            padding-left: 70px;
+        }
+        #attachimageslabel {
+            text-align: left;
+            padding-bottom: 0px;
+            margin-bottom: 0px;
+            line-height: auto;
+        }
+	    #attachImages {
+	        padding-top: 5px;
+	        width: 150px;
+	        float: left;
+	    }
+	    #attachImagesIcon {
+	        background-image: url('images/pofv3/add-images.png');
+	        background-position-x: left;
+	        background-repeat: no-repeat;
+	        height: 30px;
+	        padding-left: 35px;
+	        margin-left: 10px;
+	    }
+
+	    #sendgift {
+	        padding-top: 5px;
+	        width: 150px;
+	        float: left;
+	    }
+	    #sendGiftIcon {
+	        background-image: url('image/gift.png');
+	        background-position-x: left;
+	        background-repeat: no-repeat;
+	        height: 30px;
+	        padding-left: 25px;
+	        margin-left: 10px;
+	    }
+
+	    #sendreply {
+	        text-align: right;
+	        padding-right: 0px;
+	    }
+	    #sendrose {
+	        clear: both;
+	        width: 100%;
+	        float: left;
+	        padding-top: 20px;
+	        padding-bottom: 20px;
+	    }
+	    #helpwrapper {
+	        width: 80%;
+	        padding: 10px;
+	        margin: auto;
+            clear: both; 
+            text-align: left
+	    }
+        #helpwrapper h2 {
+            font-size: 18px;
+            font-weight: normal;  
+        }
+        #helpwrapper h3 {
+            font-size: 16px;
+            font-weight: normal;  
+        }
+	    #top10favconvo {
+	        width: 50%;
+	        float: left;
+	        padding: 10px;
+	    }
+	    #top10leastfavconvo {
+	        width: 40%;
+	        float: left;
+	        padding: 10px;
+	    }
+	    ol {
+	        padding-left: 20px;
+	    }
+	    #top10datepicks {
+	        width: 50%;
+	        float: left;
+	        padding: 10px;
+	    }
+	    #top10restaurants {
